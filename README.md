@@ -1,2 +1,2 @@
 # hyperskill
-Repository for training projects
+Repository for training projects from hyperskill.org
