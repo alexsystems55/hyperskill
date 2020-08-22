@@ -6,4 +6,5 @@ Repository for training projects from [hyperskill.org](https://hyperskill.org/)
 * Hangman
 * Simple Banking System
 * Simple Chatty Bot
+* Tic Tac Toe
 * Zookeeper
