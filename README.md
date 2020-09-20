@@ -7,4 +7,5 @@ Repository for training projects from [hyperskill.org](https://hyperskill.org/)
 * Simple Banking System
 * Simple Chatty Bot
 * Tic Tac Toe
+* To-Do List
 * Zookeeper
