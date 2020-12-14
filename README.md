@@ -4,6 +4,7 @@ Repository for training projects from [hyperskill.org](https://hyperskill.org/)
 * Coffee Machine
 * Credit Calculator
 * Hangman
+* Numeric Matrix Processor
 * Regex Engine
 * Simple Banking System
 * Simple Chatty Bot
