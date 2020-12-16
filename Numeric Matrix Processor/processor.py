@@ -1,3 +1,16 @@
+def str_to_number(input_str: str) -> (int, float):
+    """
+    Use int where possible to match examples
+
+    :param input_str: A number as a string
+    :return: A number as an int of a float
+    """
+    try:
+        return int(input_str)
+    except ValueError:
+        return float(input_str)
+
+
 def input_matrix(matrix_num="") -> list:
     """
     Gets matrix from user's input
@@ -11,7 +24,7 @@ def input_matrix(matrix_num="") -> list:
     matrix = []
     print(f"Enter {matrix_num}matrix:")
     for _ in range(rows):
-        matrix.append(list(map(float, input().split()[:cols])))
+        matrix.append(list(map(str_to_number, input().split()[:cols])))
     return matrix
 
 
@@ -53,10 +66,28 @@ def mul_matrix_by_const(matrix: list, const: float) -> None:
     print_matrix(matrix_p)
 
 
+def transpose_matrix(matrix: list, trans_type: str) -> None:
+    matrix_t = []
+    # Main diagonal
+    if trans_type == "1":
+        matrix_t = [row for row in zip(*matrix)]
+    # Side diagonal
+    elif trans_type == "2":
+        matrix_t = reversed([reversed(row) for row in zip(*matrix)])
+    # Vertical line
+    elif trans_type == "3":
+        matrix_t = [reversed(row) for row in matrix]
+    # Horizontal line
+    elif trans_type == "4":
+        matrix_t = reversed(matrix)
+    print_matrix(matrix_t)
+
+
 def menu():
     print("1. Add matrices")
     print("2. Multiply matrix by a constant")
     print("3. Multiply matrices")
+    print("4. Transpose matrix")
     print("0. Exit")
     choice = input("Your choice: ")
     # Exit
@@ -77,6 +108,15 @@ def menu():
         matrix_1 = input_matrix("first")
         matrix_2 = input_matrix("second")
         mul_matrices(matrix_1, matrix_2)
+    # Transpose matrix
+    elif choice == "4":
+        print("1. Main diagonal")
+        print("2. Side diagonal")
+        print("3. Vertical line")
+        print("4. Horizontal line")
+        choice_t = input("Your choice: ")
+        matrix_1 = input_matrix()
+        transpose_matrix(matrix_1, choice_t)
 
 
 # Main program
