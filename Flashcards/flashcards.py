@@ -1,6 +1,6 @@
 class DuplicateError(Exception):
     def __init__(self, entry: str, entry_type: str):
-        self.message = f'The {entry_type} "{entry}" already exists. Try again:'
+        self.message = f'The {entry_type} "{entry}" already exists.\n'
         super().__init__(self.message)
 
 
@@ -8,17 +8,24 @@ class Cards:
     def __init__(self):
         self.cards = {}
 
-    def add_card(self, term: str, definition: str):
+    def add_card(self, term: str, definition: str) -> None:
         self.cards[term] = definition
 
-    def check_duplicate(self, entry: str) -> bool:
-        if entry in self.cards.keys():
-            raise DuplicateError(entry, "term")
-        if entry in self.cards.values():
-            raise DuplicateError(entry, "definition")
-        return True
+    def check_term(self, term: str) -> str:
+        if term in self.cards.keys():
+            raise DuplicateError(term, "card")
+        return term
 
-    def check_card(self, term: str, definition: str) -> bool:
+    def check_definition(self, definition: str) -> str:
+        if definition in self.cards.values():
+            raise DuplicateError(definition, "definition")
+        return definition
+
+    @property
+    def cards_count(self):
+        return len(self.cards)
+
+    def check_result(self, term: str, definition: str) -> bool:
         return self.cards[term] == definition
 
     def get_definition_by_term(self, term: str) -> str:
@@ -30,37 +37,91 @@ class Cards:
                 return term
         return ""
 
+    def remove_card(self, term: str) -> None:
+        del self.cards[term]
 
-def input_data(prompt: str) -> str:
-    print(prompt)
+    def export_cards(self, file_name: str) -> None:
+        from json import dump
+
+        file = open(file_name, "w")
+        dump(self.cards, file)
+        file.close()
+
+    def import_cards(self, file_name: str) -> None:
+        from json import load
+
+        file = open(file_name, "r")
+        self.cards.update(load(file))
+        file.close()
+
+
+def menu() -> None:
     while True:
-        user_input = input()
-        try:
-            if flash_cards.check_duplicate(user_input):
-                return user_input
-        except DuplicateError as error:
-            print(error)
+        print("Input the action (add, remove, import, export, ask, exit):")
+        action = input()
+        # Add card
+        if action == "add":
+            try:
+                print("The card:")
+                card_term = flash_cards.check_term(input())
+                print("The definition of the card:")
+                card_definition = flash_cards.check_definition(input())
+                flash_cards.add_card(card_term, card_definition)
+                print(f'The pair ("{card_term}":"{card_definition}") has been added.\n')
+            except DuplicateError as error:
+                print(error)
+        # Remove card
+        elif action == "remove":
+            print("Which card?")
+            card_term = input()
+            try:
+                flash_cards.remove_card(card_term)
+                print("The card has been removed.\n")
+            except KeyError:
+                print(f'Can\'t remove "{card_term}": there is no such card.\n')
+        # Import cards from file
+        elif action == "import":
+            print("File name:")
+            file_name = input()
+            try:
+                flash_cards.import_cards(file_name)
+            except IOError as error:
+                print(error)
+        # Export cards to file
+        elif action == "export":
+            print("File name:")
+            file_name = input()
+            try:
+                flash_cards.export_cards(file_name)
+                print(f"{flash_cards.cards_count} cards have been saved.")
+            except IOError as error:
+                print(error)
+        # Ask definition for a card
+        elif action == "ask":
+            print("How many times to ask?")
+            try:
+                times = int(input())
+                for card in flash_cards.cards[:times]:
+                    print(f'Print the definition of "{card}":')
+                    user_def = input()
+                    if flash_cards.check_result(card, user_def):
+                        print("Correct!\n")
+                    else:
+                        print(
+                            f'Wrong. The right answer is "{flash_cards.get_definition_by_term(card)}".'
+                        )
+            except ValueError as error:
+                print(error)
+        elif action == "exit":
+            print("Bye bye!")
+            exit()
 
 
 # Initialization
-cards_number = int(input("Input the number of cards:\n"))
 flash_cards = Cards()
-# Input
-for number in range(1, cards_number + 1):
-    card_term = input_data(f"The term for card #{number}:")
-    card_definition = input_data(f"The definition for card #{number}:")
-    flash_cards.add_card(card_term, card_definition)
-# Check
-for card in flash_cards.cards:
-    user_def = input(f'Print the definition of "{card}":\n')
-    if flash_cards.check_card(card, user_def):
-        print("Correct!")
-    elif user_def in flash_cards.cards.values():
-        print(
-            f'Wrong. The right answer is "{flash_cards.get_definition_by_term(card)}", '
-            f'but your definition is correct for "{flash_cards.get_term_by_definition(user_def)}". '
-        )
-    else:
-        print(
-            f'Wrong. The right answer is "{flash_cards.get_definition_by_term(card)}".'
-        )
+menu()
+#    elif user_def in flash_cards.cards.values():
+#        print(
+#            f'Wrong. The right answer is "{flash_cards.get_definition_by_term(card)}", '
+#            f'but your definition is correct for "{flash_cards.get_term_by_definition(user_def)}". '
+#        )
