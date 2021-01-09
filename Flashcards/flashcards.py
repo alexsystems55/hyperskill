@@ -47,12 +47,14 @@ class Cards:
         dump(self.cards, file)
         file.close()
 
-    def import_cards(self, file_name: str) -> None:
+    def import_cards(self, file_name: str) -> int:
         from json import load
 
         file = open(file_name, "r")
-        self.cards.update(load(file))
+        data = load(file)
+        self.cards.update(data)
         file.close()
+        return len(data)
 
 
 def menu() -> None:
@@ -84,7 +86,9 @@ def menu() -> None:
             print("File name:")
             file_name = input()
             try:
-                flash_cards.import_cards(file_name)
+                print(f"{flash_cards.import_cards(file_name)} cards have been loaded.")
+            except FileNotFoundError:
+                print("File not found.")
             except IOError as error:
                 print(error)
         # Export cards to file
@@ -98,14 +102,22 @@ def menu() -> None:
                 print(error)
         # Ask definition for a card
         elif action == "ask":
+            from random import choice
+
             print("How many times to ask?")
             try:
                 times = int(input())
-                for card in flash_cards.cards[:times]:
+                for _ in range(times):
+                    card = choice(list(flash_cards.cards))
                     print(f'Print the definition of "{card}":')
                     user_def = input()
                     if flash_cards.check_result(card, user_def):
                         print("Correct!\n")
+                    elif user_def in flash_cards.cards.values():
+                        print(
+                            f'Wrong. The right answer is "{flash_cards.get_definition_by_term(card)}", '
+                            f'but your definition is correct for "{flash_cards.get_term_by_definition(user_def)}".'
+                        )
                     else:
                         print(
                             f'Wrong. The right answer is "{flash_cards.get_definition_by_term(card)}".'
@@ -120,8 +132,3 @@ def menu() -> None:
 # Initialization
 flash_cards = Cards()
 menu()
-#    elif user_def in flash_cards.cards.values():
-#        print(
-#            f'Wrong. The right answer is "{flash_cards.get_definition_by_term(card)}", '
-#            f'but your definition is correct for "{flash_cards.get_term_by_definition(user_def)}". '
-#        )
