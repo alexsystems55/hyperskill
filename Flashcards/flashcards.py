@@ -4,12 +4,18 @@ class DuplicateError(Exception):
         super().__init__(self.message)
 
 
+class OtherTermError(Exception):
+    def __init__(self, term: str, other_term: str):
+        self.message = f'Wrong. The right answer is "{term}", but your definition is correct for "{other_term}".'
+        super().__init__(self.message)
+
+
 class Cards:
     def __init__(self):
         self.cards = {}
 
-    def add_card(self, term: str, definition: str) -> None:
-        self.cards[term] = definition
+    def add_card(self, term: str, definition: str, errors: int = 0) -> None:
+        self.cards[term] = {"definition": definition, "errors": errors}
 
     def check_term(self, term: str) -> str:
         if term in self.cards.keys():
@@ -17,8 +23,9 @@ class Cards:
         return term
 
     def check_definition(self, definition: str) -> str:
-        if definition in self.cards.values():
-            raise DuplicateError(definition, "definition")
+        for value in self.cards.values():
+            if value["definition"] == definition:
+                raise DuplicateError(definition, "definition")
         return definition
 
     @property
@@ -26,14 +33,20 @@ class Cards:
         return len(self.cards)
 
     def check_result(self, term: str, definition: str) -> bool:
-        return self.cards[term] == definition
+        if self.cards[term]["definition"] == definition:
+            return True
+        else:
+            other_term = self.get_term_by_definition(definition)
+            if other_term:
+                raise OtherTermError(term, other_term)
+            return False
 
     def get_definition_by_term(self, term: str) -> str:
-        return self.cards[term]
+        return self.cards[term]["definition"]
 
     def get_term_by_definition(self, definition: str) -> str:
-        for term, def_ in self.cards.items():
-            if def_ == definition:
+        for term, value in self.cards.items():
+            if value["definition"] == definition:
                 return term
         return ""
 
@@ -57,21 +70,33 @@ class Cards:
         return len(data)
 
 
+def data_input(prompt: str) -> str:
+    check = {
+        "card": flash_cards.check_term,
+        "definition": flash_cards.check_definition,
+    }
+    result = ""
+    while True:
+        print(prompt)
+        try:
+            func_name = prompt.split()[1].strip(":")
+            result = check[func_name](input())
+        except DuplicateError as error:
+            print(error)
+        if result:
+            return result
+
+
 def menu() -> None:
     while True:
-        print("Input the action (add, remove, import, export, ask, exit):")
+        print("Input the action (add, remove, import, export, ask, exit, log, hardest card, reset stats):")
         action = input()
         # Add card
         if action == "add":
-            try:
-                print("The card:")
-                card_term = flash_cards.check_term(input())
-                print("The definition of the card:")
-                card_definition = flash_cards.check_definition(input())
-                flash_cards.add_card(card_term, card_definition)
-                print(f'The pair ("{card_term}":"{card_definition}") has been added.\n')
-            except DuplicateError as error:
-                print(error)
+            card_term = data_input("The card:")
+            card_definition = data_input("The definition of the card:")
+            flash_cards.add_card(card_term, card_definition)
+            print(f'The pair ("{card_term}":"{card_definition}") has been added.\n')
         # Remove card
         elif action == "remove":
             print("Which card?")
@@ -111,17 +136,15 @@ def menu() -> None:
                     card = choice(list(flash_cards.cards))
                     print(f'Print the definition of "{card}":')
                     user_def = input()
-                    if flash_cards.check_result(card, user_def):
-                        print("Correct!\n")
-                    elif user_def in flash_cards.cards.values():
-                        print(
-                            f'Wrong. The right answer is "{flash_cards.get_definition_by_term(card)}", '
-                            f'but your definition is correct for "{flash_cards.get_term_by_definition(user_def)}".'
-                        )
-                    else:
-                        print(
-                            f'Wrong. The right answer is "{flash_cards.get_definition_by_term(card)}".'
-                        )
+                    try:
+                        if flash_cards.check_result(card, user_def):
+                            print("Correct!\n")
+                        else:
+                            print(
+                                f'Wrong. The right answer is "{flash_cards.get_definition_by_term(card)}".'
+                            )
+                    except OtherTermError as error:
+                        print(error)
             except ValueError as error:
                 print(error)
         elif action == "exit":
