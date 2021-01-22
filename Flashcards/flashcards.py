@@ -1,3 +1,6 @@
+import argparse
+
+
 class DuplicateError(Exception):
     def __init__(self, entry: str, entry_type: str):
         self.message = f'The {entry_type} "{entry}" already exists.\n'
@@ -55,7 +58,9 @@ class Cards:
         if self.cards:
             max_errors = max(self.cards[card]["errors"] for card in self.cards)
         if max_errors:
-            return [max_errors] + [card for card in self.cards if self.cards[card]["errors"] == max_errors]
+            return [max_errors] + [
+                card for card in self.cards if self.cards[card]["errors"] == max_errors
+            ]
         return [max_errors]
 
     def remove_card(self, term: str) -> None:
@@ -110,6 +115,23 @@ def card_data_input(prompt: str) -> str:
             return result
 
 
+def load_cards(file_name: str) -> None:
+    try:
+        output(f"{flash_cards.import_cards(file_name)} cards have been loaded.")
+    except FileNotFoundError:
+        output("File not found.")
+    except IOError as error:
+        output(error)
+
+
+def save_cards(file_name: str) -> None:
+    try:
+        flash_cards.export_cards(file_name)
+        output(f"{flash_cards.cards_count()} cards have been saved.")
+    except IOError as error:
+        output(error)
+
+
 def save_log(file_name: str) -> None:
     with open(file_name, "w") as file:
         for line in log:
@@ -140,20 +162,11 @@ def menu() -> None:
         # Import cards from file
         elif action == "import":
             file_name = get_file_name()
-            try:
-                output(f"{flash_cards.import_cards(file_name)} cards have been loaded.")
-            except FileNotFoundError:
-                output("File not found.")
-            except IOError as error:
-                output(error)
+            load_cards(file_name)
         # Export cards to file
         elif action == "export":
             file_name = get_file_name()
-            try:
-                flash_cards.export_cards(file_name)
-                output(f"{flash_cards.cards_count()} cards have been saved.")
-            except IOError as error:
-                output(error)
+            save_cards(file_name)
         # Ask definition for a card
         elif action == "ask":
             from random import choice
@@ -179,6 +192,8 @@ def menu() -> None:
         # Exit program
         elif action == "exit":
             output("Bye bye!")
+            if args.export_to:
+                save_cards(args.export_to)
             exit()
         # Save log file
         elif action == "log":
@@ -191,10 +206,12 @@ def menu() -> None:
             if len(hardest) == 1:
                 output("There are no cards with errors.\n")
             elif len(hardest) == 2:
-                output(f'The hardest card is "{hardest[1]}". You have {hardest[0]} errors answering it.\n')
+                output(
+                    f'The hardest card is "{hardest[1]}". You have {hardest[0]} errors answering it.\n'
+                )
             else:
                 hard_str = ", ".join(f'"{item}"' for item in hardest[1:])
-                output(f'The hardest cards are {hard_str}\n')
+                output(f"The hardest cards are {hard_str}\n")
         # Reset stats
         elif action == "reset stats":
             flash_cards.reset_stats()
@@ -202,6 +219,16 @@ def menu() -> None:
 
 
 # Initialization
+parser = argparse.ArgumentParser(
+    prog="flashcards", description="Flashcards processor :)"
+)
+parser.add_argument("--import_from", help="File name to load cards from")
+parser.add_argument("--export_to", help="File name to save cards to")
+args = parser.parse_args()
+
 flash_cards = Cards()
 log = []
+if args.import_from:
+    load_cards(args.import_from)
+
 menu()
