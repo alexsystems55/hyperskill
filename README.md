@@ -9,6 +9,7 @@ Repository for training projects from [hyperskill.org](https://hyperskill.org/)
 * Regex Engine
 * Simple Banking System
 * Simple Chatty Bot
+* Text Generator
 * Tic Tac Toe
 * To-Do List
 * Zookeeper
