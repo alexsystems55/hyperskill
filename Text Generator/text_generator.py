@@ -3,9 +3,9 @@ from random import choices
 from nltk.tokenize import regexp_tokenize
 from nltk import bigrams
 
+
 # Data input
 file_path = input()
-tokens = []
 try:
     with open(file_path, "r", encoding="utf-8") as text_file:
         tokens = regexp_tokenize(text_file.read(), r"\S+")
@@ -16,17 +16,31 @@ except OSError as error:
 bigrams_ = list(bigrams(tokens))
 
 # Build Markov chain model
-heads = defaultdict(Counter)
+chains = defaultdict(Counter)
 for head, tail in bigrams_:
-    heads[head][tail] += 1
+    chains[head][tail] += 1
 
 # Generate text
-for sentence in range(10):
-    text = [choices(bigrams_)[0][0]]
-    start_word = text[0]
-    for step in range(9):
-        text += choices(
-            list(heads[start_word].keys()), list(heads[start_word].values())
-        )
-        start_word = text[-1]
-    print(" ".join(text))
+SENTENCES_NUMBER = 10
+END_MARKERS = [".", "!", "?"]
+MIN_WORDS = 5
+for _ in range(SENTENCES_NUMBER):
+    sentence = []
+    # Get the first word of the sentence
+    while True:
+        first_word = choices(bigrams_)[0][0]
+        # Only capitalized and without sentence-ending punctuation marks
+        if first_word[0].isupper() and first_word[-1] not in END_MARKERS:
+            break
+    sentence.append(first_word)
+    # Get next words
+    while True:
+        next_word = choices(
+            list(chains[first_word].keys()), list(chains[first_word].values())
+        )[0]
+        sentence += [next_word]
+        # End sentence with punctuation mark after at least MIN_WORDS
+        if next_word[-1] in END_MARKERS and len(sentence) >= MIN_WORDS:
+            break
+        first_word = next_word
+    print(" ".join(sentence))
