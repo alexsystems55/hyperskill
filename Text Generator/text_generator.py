@@ -1,7 +1,7 @@
 from collections import Counter, defaultdict
 from random import choices
 from nltk.tokenize import regexp_tokenize
-from nltk import bigrams
+from nltk import trigrams
 
 
 # Data input
@@ -12,35 +12,37 @@ try:
 except OSError as error:
     print(error)
 
-# Get bigrams
-bigrams_ = list(bigrams(tokens))
+# Get trigrams
+trigrams_ = list(trigrams(tokens))
 
 # Build Markov chain model
 chains = defaultdict(Counter)
-for head, tail in bigrams_:
-    chains[head][tail] += 1
+for head_1, head_2, tail in trigrams_:
+    chains[f"{head_1} {head_2}"][tail] += 1
 
 # Generate text
 SENTENCES_NUMBER = 10
 END_MARKERS = [".", "!", "?"]
 MIN_WORDS = 5
 for _ in range(SENTENCES_NUMBER):
-    sentence = []
+    sentence = ""
     # Get the first word of the sentence
     while True:
-        first_word = choices(bigrams_)[0][0]
+        head = choices(list(chains.keys()))[0]
         # Only capitalized and without sentence-ending punctuation marks
-        if first_word[0].isupper() and first_word[-1] not in END_MARKERS:
+        if (
+            head[0].isupper()
+            and head.split()[0][-1]
+            not in END_MARKERS  # Check end of the first word in head
+        ):
             break
-    sentence.append(first_word)
+    sentence += head
     # Get next words
     while True:
-        next_word = choices(
-            list(chains[first_word].keys()), list(chains[first_word].values())
-        )[0]
-        sentence += [next_word]
+        next_word = choices(tuple(chains[head].keys()), tuple(chains[head].values()))[0]
+        sentence += f" {next_word}"
         # End sentence with punctuation mark after at least MIN_WORDS
-        if next_word[-1] in END_MARKERS and len(sentence) >= MIN_WORDS:
+        if next_word[-1] in END_MARKERS and len(sentence.split()) >= MIN_WORDS:
             break
-        first_word = next_word
-    print(" ".join(sentence))
+        head = " ".join(sentence.split()[-2:])
+    print(sentence)
