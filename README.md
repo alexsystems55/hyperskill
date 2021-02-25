@@ -3,6 +3,7 @@ Repository for training projects from [hyperskill.org](https://hyperskill.org/)
 
 * Coffee Machine
 * Credit Calculator
+* Currency Converter
 * Flashcards
 * Hangman
 * Numeric Matrix Processor
