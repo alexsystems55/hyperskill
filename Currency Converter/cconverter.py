@@ -43,5 +43,5 @@ while True:
     else:
         print("Sorry, but it is not in the cache!")
         get_rate(dst_currency)
-    received = rates_cache[dst_currency] * amount
+    received = round(rates_cache[dst_currency] * amount, 2)
     print(f"You received {received} {dst_currency.upper()}.")
