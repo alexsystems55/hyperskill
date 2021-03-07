@@ -9,28 +9,32 @@ def show_error() -> None:
 
 
 # URL input and validation
-url = input("Input the URL: ")
+print("Input the URL:")
+url = input()
 rx_url = re.compile(r"https://www.imdb.com/title/[a-z0-9]+/")
 if not rx_url.match(url):
     show_error()
 
 # Get the page
-headers = {'Accept-Language': 'en-US,en;q=0.5'}  # Forcing to return English version of the page
+headers = {
+    "Accept-Language": "en-US,en;q=0.5"
+}  # Forcing to return English version of the page
 response = requests.get(url, headers=headers)
 if response.status_code != 200:
     show_error()
-
+print(response.text)
 # Parse the page
 soup = BeautifulSoup(response.content, "html.parser")
 movie_data = {}
 
 # Find the title
-rx_title = re.compile(r"(?P<title>.+?) \(\d+\) - IMDb")
-title = soup.find("title").text
-match = rx_title.match(title)
-if not match:
-    show_error()
-movie_data["title"] = match.group("title")
+# rx_title = re.compile(r"(?P<title>.+?) \(\d+\) - IMDb")
+# title = soup.find("h1").text
+title = soup.find("div", class_="originalTitle").text
+# match = rx_title.match(title)
+# if not match:
+#    show_error()
+movie_data["title"] = title.strip()  # match.group("title")
 
 # Find the description
 description = soup.find("div", class_="summary_text").text
