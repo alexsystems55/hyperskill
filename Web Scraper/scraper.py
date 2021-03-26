@@ -1,45 +1,33 @@
 from bs4 import BeautifulSoup
-import re
 import requests
+from string import punctuation
 
 
-def show_error() -> None:
-    print("Invalid movie page!")
-    exit(-1)
+def get_page(url: str) -> bytes:
+    response = requests.get(url)
+    if response.status_code != 200:
+        print(f"HTTP error {response.status_code}!")
+        exit(-1)
+    return response.content
 
 
-# URL input and validation
-print("Input the URL:")
-url = input()
-rx_url = re.compile(r"https://www.imdb.com/title/[a-z0-9]+/")
-if not rx_url.match(url):
-    show_error()
+BASE_URL = "https://www.nature.com"
 
-# Get the page
-headers = {
-    "Accept-Language": "en-US,en;q=0.5"
-}  # Forcing to return English version of the page
-response = requests.get(url, headers=headers)
-if response.status_code != 200:
-    show_error()
-print(response.text)
-# Parse the page
-soup = BeautifulSoup(response.content, "html.parser")
-movie_data = {}
+page = get_page(f"{BASE_URL}/nature/articles")
+soup = BeautifulSoup(page, "lxml")
+translation_table = {pm: "" for pm in punctuation}
+translation_table[" "] = "_"
 
-# Find the title
-# rx_title = re.compile(r"(?P<title>.+?) \(\d+\) - IMDb")
-# title = soup.find("h1").text
-title = soup.find("div", class_="originalTitle").text
-# match = rx_title.match(title)
-# if not match:
-#    show_error()
-movie_data["title"] = title.strip()  # match.group("title")
-
-# Find the description
-description = soup.find("div", class_="summary_text").text
-movie_data["description"] = description.strip()
-
-# Output the result
-print()
-print(movie_data)
+for article in soup.find_all("article"):
+    article_type = article.find(attrs={"data-test": "article.type"}).span.string
+    if article_type == "News":
+        file_name = str(article.h3.a.string).translate(str.maketrans(translation_table))
+        file_name += ".txt"
+        article_link = article.h3.a.get("href")
+        article_content = get_page(f"{BASE_URL}{article_link}")
+        article_soup = BeautifulSoup(article_content, "lxml")
+        article_text = article_soup.find(
+            "div", class_="article__body cleared"
+        ).get_text()
+        with open(file_name, "wb") as article_file:
+            article_file.write(bytes(article_text.strip(), "utf-8"))
