@@ -1,3 +1,36 @@
+class Character:
+    def __init__(self):
+        self.lives = 3
+        self.inventory = {}  # {"item_type": "item_name"}
+
+        print("Create your character:")
+        self.name = input("Name ")
+        self.species = input("Species ")
+        self.gender = input("Gender ")
+
+        print("Pack your bag for the journey:")
+        snack = input("Favourite Snack ")
+        weapon = input("A weapon for the journey ")
+        tool = input("A traversal tool ")
+        self.add_item({"snack": snack, "weapon": weapon, "tool": tool}, silent=True)
+
+    def __str__(self):
+        return f"{self.name}, {self.species}, {self.gender}."
+
+    def add_item(self, item: dict, silent: bool=False):
+        self.inventory.update(item)
+        if not silent:
+            print(f"A new item has been added to your inventory: {item.values()}")
+
+    def show_inventory(self):
+        print(f"Inventory: {', '.join(self.inventory.values())}")
+
+    def show_traits(self, show_lives: bool=True):
+        print(self)
+        if show_lives:
+            print(f"Lives remaining: {self.lives}\n")
+
+
 class Game:
     def __init__(self, title: str, user: str):
         self.title = title
@@ -5,6 +38,7 @@ class Game:
         self.level = 1
         self.user = user
         self.saves_path = f"saves/{user}.txt"
+        self.hero = Character()
 
     @property
     def difficulty_str(self) -> str:
@@ -23,16 +57,32 @@ class Game:
         except KeyError:
             raise ValueError
 
+    @staticmethod
+    def load_data_from_file(self, path: str) -> str:
+        try:
+            with open(path, "r") as data_file:
+                return data_file.read()
+        except OSError as error:
+            print(error)
 
-class Character:
-    def __init__(self, name: str, species: str, gender: str):
-        self.name = name
-        self.species = species
-        self.gender = gender
-        self.bag = {}
-
-    def __str__(self):
-        return f"{self.name}, {self.species}, {self.gender}"
+    @staticmethod
+    def get_user_input(self, message: str):
+        print(message)
+        choice = input().lower()
+        if choice == "/q":
+            exit_confirmation = input("You sure you want to quit the game? Y/N ").lower()
+            if exit_confirmation == "y":
+                print("Goodbye!")
+                exit(0)
+        elif choice == "/h":
+            print("Type the number of the option you want to choose.")
+            print("Commands you can use:")
+            print("/i => Shows inventory.")
+            print("/q => Exits the game.")
+            print("/c => Shows the character traits.")
+            print("/h => Shows help.")
+        elif choice == "/c":
+            self.hero.show_traits()
 
 
 def new_game():
@@ -42,16 +92,6 @@ def new_game():
     )
     if user_name != "/b":
         game = Game("Journey to Mount Qaf", user_name)
-        print("Create your character:")
-        char_name = input("Name ")
-        char_spec = input("Species ")
-        char_gender = input("Gender ")
-        hero = Character(char_name, char_spec, char_gender)
-        print("Pack your bag for the journey:")
-        snack = input("Favourite Snack ")
-        weapon = input("A weapon for the journey ")
-        tool = input("A traversal tool ")
-        hero.bag.update({"snack": snack, "weapon": weapon, "tool": tool})
         while True:
             print("Choose your difficulty:")
             print("1 - Easy")
@@ -64,8 +104,8 @@ def new_game():
             except ValueError:
                 print("Unknown input! Please enter a valid one.")
         print("Good luck on your journey!")
-        print(f"Your character: {hero}")
-        print(f"Your inventory: {', '.join(hero.bag.values())}")
+        game.hero.show_traits(show_lives=False)
+        game.hero.show_inventory()
         print(f"Difficulty: {game.difficulty_str}")
     else:
         print("Going back to menu...\n")
