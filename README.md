@@ -1,5 +1,5 @@
 # hyperskill
-Repository for training projects from [hyperskill.org](https://hyperskill.org/)
+Repository for training projects from [hyperskill.org](https://hyperskill.org/tracks/2)
 
 * Coffee Machine
 * Credit Calculator
