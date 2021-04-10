@@ -40,6 +40,7 @@ class Game:
         self.is_running = True
         self.title = title
         # Set some defaults
+        self.difficulty_map = {1: "Easy", 2: "Medium", 3: "Hard"}
         self._difficulty = 2
         self.level = 1
         self.user = "user"
@@ -54,8 +55,7 @@ class Game:
 
     @property
     def difficulty_str(self) -> str:
-        difficulty_map = {1: "Easy", 2: "Medium", 3: "Hard"}
-        return difficulty_map[self._difficulty]
+        return self.difficulty_map[self._difficulty]
 
     @property
     def difficulty(self) -> int:
@@ -72,33 +72,36 @@ class Game:
             raise ValueError
 
     def load_data_from_file(self):
-        rx_story = re.compile(r"Level (?P<level>\d+)\n")
+        rx_level = re.compile(r"Level (?P<level>\d+)\n")
         try:
             with open("story/story.txt", "r") as data_file:
                 for line in data_file.read().split("+"):
-                    match = rx_story.search(line)
+                    match = rx_level.search(line)
                     if match:
                         level = int(match.group("level"))
                         continue
                     self.story[level].append(line.strip())
             with open("story/choices.txt", "r") as data_file:
-                self.choices = data_file.read().splitlines()
+                choices = data_file.read().splitlines()
+            for index in range(2, len(choices), 3):
+                self.choices.append(
+                    (choices[index - 2], choices[index - 1], choices[index])
+                )
         except OSError as error:
             print(error)
 
     def game_loop(self):
+        choices_num = 3
         while True:
             if self.hero.lives < 1:
                 print("You've run out of lives! Game over!")
                 break
             print(self.story[self.level].pop(0), "\n")
-            for index, line in enumerate(self.choices[:3], start=1):
-                print(f"{index} - {line}")
-            print()
-            print(
-                "What will you do? Type the number of the option or type '/h' to show help."
+            choices = self.choices[:choices_num]
+            choice = self.get_user_choice(
+                choices,
+                "What will you do? Type the number of the option or type '/h' to show help.",
             )
-            choice = input().lower()
             if choice == "/q":
                 exit_confirmation = input(
                     "You sure you want to quit the game? Y/N "
@@ -121,14 +124,33 @@ class Game:
             else:
                 print("Unknown input! Please enter a valid one.")
 
-    def main_menu(self):
-        while self.is_running:
-            print(f"*** Welcome to the {self.title}! ***\n")
-            print("Press key '1' or type 'start' to start a new game")
-            print("Press key '2' or type 'load' to load your progress")
-            print("Press key '3' or type 'quit' to quit the game")
+    @staticmethod
+    def get_user_choice(choices: list, prompt: str) -> str:
+        rx_choice = re.compile(r"(?P<action>'.+?')")
+        print(prompt)
+        print()
+        actions = set()
+        for index, choice in enumerate(choices, start=1):
+            for match in rx_choice.finditer(choice):
+                actions.add(match.group("action"))
+            actions.add(str(index))
+            print(f"{index} - {choice}")
+        user_choice = input().lower()
+        if user_choice not in actions:
+            print("Unknown input! Please enter a valid one.\n")
+            return ""
+        return user_choice
 
-            choice = input().lower()
+    def main_menu(self):
+        choices = [
+            "Press key '1' or type 'start' to start a new game",
+            "Press key '2' or type 'load' to load your progress",
+            "Press key '3' or type 'quit' to quit the game",
+        ]
+        while self.is_running:
+            choice = self.get_user_choice(
+                choices, f"*** Welcome to the {self.title}! ***"
+            )
             if choice in ("1", "start"):
                 self.start_new_game()
             elif choice in ("2", "load"):
@@ -141,9 +163,9 @@ class Game:
 
     def start_new_game(self):
         print("Starting a new game...")
-#        user_name = input(
-#            "Enter a user name to save your progress or type '/b' to go back "
-#        )
+        #        user_name = input(
+        #            "Enter a user name to save your progress or type '/b' to go back "
+        #        )
         user_name = "test_user"
         if user_name != "/b":
             # User settings
@@ -152,16 +174,9 @@ class Game:
             # Create our Hero
             self.hero = Character()
             # Set up game difficulty
-#            while True:
-#                print("Choose your difficulty:")
-#                print("1 - Easy")
-#                print("2 - Medium")
-#                print("3 - Hard")
-#                try:
-#                    self.difficulty = input()
-#                    break
-#                except ValueError:
-#                    print("Unknown input! Please enter a valid one.")
+            #            self.get_user_choice(
+            #                list(self.difficulty_map.values()), "Choose your difficulty: "
+            #            )
             self.difficulty = "2"
 
             # Show summary and start the game
@@ -175,3 +190,26 @@ class Game:
 
 
 game = Game("Journey to Mount Qaf")
+
+story = {
+    1: [
+        {
+            "story": "You saw a door with a lock. You also saw a human-sized bird in front of it.",
+            "choices": {
+                1: "Walk up to the unattached door.",
+                2: "Examine the strange bird from afar.",
+                3: "Walk towards the path and face the bird.",
+            },
+            "outcomes": {
+                1: [
+                    "You tried the key on the lock and the door opened. (inventory-'key' and move option1)",
+                    "You don't have a key to open the lock. (repeat option2)",
+                ],
+                2: ["Its eyes are following you, interested. (repeat)"],
+                3: [
+                    "You take out your weapon and attack the bird. It's too fast... (life-1)"
+                ],
+            },
+        }
+    ]
+}
