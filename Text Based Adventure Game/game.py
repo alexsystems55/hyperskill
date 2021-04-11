@@ -45,10 +45,8 @@ class Game:
         self.level = 1
         self.user = "user"
         self.hero = None
-        self.saves_path = f"saves/user.txt"
+        self.saves_path = f"saves/{self.user}.txt"
         self.story = defaultdict(list)
-        self.choices = []
-        self.outcomes = []
         # Let's go!
         self.load_data_from_file()
         self.main_menu()
@@ -74,30 +72,37 @@ class Game:
     def load_data_from_file(self):
         rx_level = re.compile(r"Level (?P<level>\d+)\n")
         try:
+            with open("story/choices.txt", "r") as data_file:
+                choices = data_file.read().splitlines()
+            with open("story/outcomes.txt", "r") as data_file:
+                outcomes = data_file.read().split("*")
             with open("story/story.txt", "r") as data_file:
-                for line in data_file.read().split("+"):
-                    match = rx_level.search(line)
+                for stage in data_file.read().split("+"):
+                    match = rx_level.search(stage)
                     if match:
                         level = int(match.group("level"))
                         continue
-                    self.story[level].append(line.strip())
-            with open("story/choices.txt", "r") as data_file:
-                choices = data_file.read().splitlines()
-            for index in range(2, len(choices), 3):
-                self.choices.append(
-                    (choices[index - 2], choices[index - 1], choices[index])
-                )
+                    self.story[level].append({"story": stage.strip(), "choices": {}, "outcomes": {}})
+                    for index in range(1, 4):
+                        self.story[level][-1]["choices"][index] = choices.pop(0)
+                        self.story[level][-1]["outcomes"][index] = [outcomes.pop(0).strip()]
+                        if "option" in self.story[level][-1]["outcomes"][index][0]:
+                            try:
+                                while "option" in outcomes[0]:
+                                    self.story[level][-1]["outcomes"][index].append(outcomes.pop(0).strip())
+                            except IndexError:
+                                pass
         except OSError as error:
             print(error)
 
     def game_loop(self):
-        choices_num = 3
         while True:
             if self.hero.lives < 1:
                 print("You've run out of lives! Game over!")
                 break
-            print(self.story[self.level].pop(0), "\n")
-            choices = self.choices[:choices_num]
+            stage = 0
+            print(self.story[self.level][stage]["story"], "\n")
+            choices = self.story[self.level][stage]["choices"].values()
             choice = self.get_user_choice(
                 choices,
                 "What will you do? Type the number of the option or type '/h' to show help.",
@@ -126,14 +131,16 @@ class Game:
 
     @staticmethod
     def get_user_choice(choices: list, prompt: str) -> str:
-        rx_choice = re.compile(r"(?P<action>'.+?')")
+        rx_action = re.compile(r"(?P<action>'.+?')")
         print(prompt)
         print()
-        actions = set()
+        # Some default actions
+        actions = {"/c", "/h", "/i", "/q"}
         for index, choice in enumerate(choices, start=1):
-            for match in rx_choice.finditer(choice):
+            # Search available actions in given choices
+            for match in rx_action.finditer(choice):
                 actions.add(match.group("action"))
-            actions.add(str(index))
+            actions.add(str(index))  # Choices numbers usable as actions, too
             print(f"{index} - {choice}")
         user_choice = input().lower()
         if user_choice not in actions:
@@ -183,7 +190,7 @@ class Game:
             print("Good luck on your journey!")
             self.hero.show_traits(show_lives=False)
             self.hero.show_inventory()
-            print(f"Difficulty: {self.difficulty_str}")
+            print(f"Difficulty: {self.difficulty_str}\n")
             self.game_loop()
         else:
             print("Going back to menu...\n")
@@ -211,5 +218,6 @@ story = {
                 ],
             },
         }
-    ]
+    ],
+    2: [],
 }
