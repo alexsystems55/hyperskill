@@ -1,0 +1,47 @@
+You found a key. (inventory+'key' and move)
+*
+You go up the mountain, using the {tool}  (move)
+*
+You admired the majestic view of the mountain! (repeat)
+*
+You tried the key on the lock and the door opened. (inventory-'key' and move option1)
+*
+You don't have a key to open the lock. (repeat option2)
+*
+The bird has red wings with blue stripes on. It has a long neck.
+Inside its beak it has sharp teeth and its eyes are following you, interested. (repeat)
+*
+You take out your weapon and attack the bird.
+It stretches its head to attack you. It's too fast... (life-1)
+*
+The voice says 'Too bad, I thought you were clever!' as it gets closer to you.
+You see a shape like gorilla for a second and you can't even make a peep... (life-1)
+*
+The darkness says 'Wrong!'. You try to run but it catches you from your legs and drags you to darkness... (life-1)
+*
+The darkness says 'Correct! You may pass traveller.'
+You saw a light coming from the inner cave and you follow it. (move and save)
+*
+The dragon smacks its lips and shows its tongue. It looks hungry. (repeat)
+*
+You get closer to the dragon slowly and with one swift blow, it's dead. (move)
+*
+You take out your snack from your bag and give it to the dragon.
+The dragon loves it and flies away happily. (inventory-'snack' and move)
+*
+You open the chest on the left. You found an extra life! (life+1)
+*
+You open the chest on the right but the chest is empty.
+You try to look inside closely but something pushes you inside the chest.
+The chest close itself. (life-1)
+*
+The hood disappears without a trace as you walk away from it. (move)
+*
+The dragon shoots flame to your way and burn you! (life-1)
+*
+The dragon crushes you with its tail, you don't even see it coming... (life-1)
+*
+The smaller dragon from before appear behind the mother and flies to you, showing affection for you.
+You pet its head and the mother dragon looks happy about this. (game_won option1)
+*
+Nothing happens. The dragon moves its wings and the wind knocks you off from the mountain... (life-1 option2)

@@ -1,0 +1,18 @@
+Walk around a bit, maybe you'll find something interesting.
+Walk up the hill and begin climbing.
+Enjoy the scenery.
+Walk up to the unattached door. You wonder where it leads, can you trust it?
+Examine the strange bird from afar.
+Walk towards the path and face the bird.
+A hummingbird.
+A mosquito.
+A bumblebee.
+Take a step closer and examine the creature.
+It looks dangerous, attack with your {weapon}
+Maybe you can give something and pet the dragon.
+Choose the one on the left.
+Choose the one on the right.
+Don't trust this thing and move on.
+You try to runaway to where you came from.
+You think you can fight the dragon and take out your {weapon}
+You wait for a miracle to happen...
