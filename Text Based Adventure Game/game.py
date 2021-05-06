@@ -26,14 +26,25 @@ class Game:
 
     @property
     def difficulty_str(self) -> str:
+        """
+        :return: Game difficulty as a string
+        """
         return self.difficulty_map[self._difficulty]
 
     @property
     def difficulty(self) -> int:
+        """
+        :return: Game difficulty as an int
+        """
         return self._difficulty
 
     @difficulty.setter
     def difficulty(self, value):
+        """
+        Set game difficulty
+
+        :param value: Difficulty as a word or number
+        """
         difficulty_rev_map = {"easy": 1, "medium": 2, "hard": 3, "1": 1, "2": 2, "3": 3}
         difficulty_to_lives_map = {1: 5, 2: 3, 3: 1}
         try:
@@ -43,6 +54,30 @@ class Game:
             raise ValueError
 
     def load_data_from_file(self):
+        """
+        Load game data to structure like:
+
+        {  # dict of levels
+            1: [  # level is a list of chapters
+                {
+                    "story": "You saw a door with a lock. You also saw a human-sized bird in front of it.",
+                    "choices": {
+                        1: "Walk up to the unattached door.",
+                        2: "Examine the strange bird from afar.",
+                        3: "Walk towards the path and face the bird.",
+                    },
+                    "outcomes": {
+                        1: [
+                            "You tried the key on the lock and the door opened. (inventory-'key' and move option1)",
+                            "You don't have a key to open the lock. (repeat option2)",
+                        ],
+                        2: ["Its eyes are following you, interested. (repeat)"],
+                        3: ["You take out your weapon and attack the bird. It's too fast... (life-1)"],
+                    },
+                }
+            ],
+        }
+        """
         rx_level = re.compile(r"Level (?P<level>\d+)\n")
         try:
             with open("story/choices.txt", "r") as data_file:
@@ -75,6 +110,9 @@ class Game:
             print(error)
 
     def game_loop(self):
+        """
+        Main game loop
+        """
         while self.is_running:
             if self.chapter == 0:
                 print(f"Level {self.level}\n")
@@ -110,6 +148,13 @@ class Game:
                 break
 
     def get_user_choice(self, choices: list, prompt: str) -> str:
+        """
+        Show menu (choices) and ask for user input
+
+        :param choices: Available choices
+        :param prompt: Prompt or hint
+        :return: User choice
+        """
         rx_action = re.compile(r"'(?P<action>.+?)'")
         print(prompt)
         print()
@@ -127,6 +172,9 @@ class Game:
         return user_choice
 
     def main_menu(self):
+        """
+        Show main menu
+        """
         choices = [
             "Press key '1' or type 'start' to start a new game",
             "Press key '2' or type 'load' to load your progress",
@@ -147,6 +195,11 @@ class Game:
         print("Goodbye!")
 
     def parse_story(self, choice: str):
+        """
+        Parse story and make according actions
+
+        :param choice: User choice
+        """
         rx_action = re.compile(r"\((?P<action>.+?)\)")
         rx_item = re.compile(r"inventory(?P<action>[-+])'(?P<item>.+?)'")
         # rx_option = re.compile(r"option(?P<option>\d+)")
@@ -166,7 +219,9 @@ class Game:
             if "inventory" in match.group("action"):
                 inv_match = rx_item.search(match.group("action"))
                 if inv_match.group("action") == "+":
-                    self.hero.add_item({inv_match.group("item"): inv_match.group("item")})
+                    self.hero.add_item(
+                        {inv_match.group("item"): inv_match.group("item")}
+                    )
                 else:
                     self.hero.remove_item(inv_match.group("item"))
             # if "option" in match.group("action"):
@@ -180,6 +235,12 @@ class Game:
                 self.is_running = False
 
     def replace_inventory_items(self, text: str) -> str:
+        """
+        Replace placeholders with inventory item names
+
+        :param text: Text with placeholders
+        :return: Cleared text
+        """
         rx_inventory = re.compile(r"{(?P<item>\S+)}")
         for match in rx_inventory.finditer(text):
             if match.group("item") in self.hero.inventory:
@@ -189,6 +250,11 @@ class Game:
         return text
 
     def load_progress(self):
+        """
+        Load from save file
+
+        :return:
+        """
         saves_dir = dirname(self.saves_path)
         files = [file for file in listdir(saves_dir) if file.endswith(".json")]
         if files:
@@ -218,26 +284,31 @@ class Game:
             print("No save data found!")
 
     def save_progress(self):
+        """
+        Save game progress to file
+        """
         save_dict = {
             "char_attrs": {
                 "name": self.hero.name,
                 "species": self.hero.species,
-                "gender": self.hero.gender
+                "gender": self.hero.gender,
             },
             "inventory": self.hero.inventory,
             "difficulty": self.difficulty_str,
             "lives": self.hero.lives,
-            "level": self.level
+            "level": self.level,
         }
         with open(self.saves_path, "w") as save_file:
             json.dump(save_dict, save_file)
 
     def start_new_game(self):
+        """
+        Initialize new game
+        """
         print("Starting a new game...")
         user_name = input(
             "Enter a user name to save your progress or type '/b' to go back "
         )
-        # user_name = "test_user"
         if user_name != "/b":
             # User settings
             self.user = user_name
@@ -252,7 +323,9 @@ class Game:
             snack = input("Favourite Snack ")
             weapon = input("A weapon for the journey ")
             tool = input("A traversal tool ")
-            self.hero.add_item({"snack": snack, "weapon": weapon, "tool": tool}, silent=True)
+            self.hero.add_item(
+                {"snack": snack, "weapon": weapon, "tool": tool}, silent=True
+            )
             # Set up game difficulty
             while True:
                 difficulty = self.get_user_choice(
@@ -263,6 +336,7 @@ class Game:
                     self.difficulty = difficulty
                     break
                 print("Unknown input! Please enter a valid one.")
+
             # Show summary and start the game
             print("Good luck on your journey!")
             self.hero.show_traits(show_lives=False)
