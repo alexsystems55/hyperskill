@@ -1,5 +1,7 @@
 from collections import defaultdict
 import json
+from os import listdir
+from os.path import dirname
 import re
 
 from character import Character
@@ -16,7 +18,7 @@ class Game:
         self.chapter = 0
         self.user = "user"
         self.hero = None
-        self.saves_path = f"saves/{self.user}.json"
+        self.saves_path = f"game/saves/{self.user}.json"
         self.story = defaultdict(list)
         # Let's go!
         self.load_data_from_file()
@@ -76,9 +78,6 @@ class Game:
         while self.is_running:
             if self.chapter == 0:
                 print(f"Level {self.level}\n")
-                if self.level == 2:
-                    self.is_running = False
-                    break
             print(self.story[self.level][self.chapter]["story"], "\n")
             choice = self.get_user_choice(
                 self.story[self.level][self.chapter]["choices"].values(),
@@ -140,7 +139,7 @@ class Game:
             if choice in ("1", "start"):
                 self.start_new_game()
             elif choice in ("2", "load"):
-                print("No save data found!")
+                self.load_progress()
             elif choice in ("3", "quit"):
                 self.is_running = False
             else:
@@ -149,6 +148,8 @@ class Game:
 
     def parse_story(self, choice: str):
         rx_action = re.compile(r"\((?P<action>.+?)\)")
+        rx_item = re.compile(r"inventory(?P<action>[-+])'(?P<item>.+?)'")
+        # rx_option = re.compile(r"option(?P<option>\d+)")
         text = self.story[self.level][self.chapter]["outcomes"][int(choice)][0]
         parsed_text = re.sub(rx_action, "", text)
         parsed_text = self.replace_inventory_items(parsed_text)
@@ -162,10 +163,21 @@ class Game:
             elif "life-1" in match.group("action"):
                 self.hero.sub_life()
                 self.chapter = 0
+            if "inventory" in match.group("action"):
+                inv_match = rx_item.search(match.group("action"))
+                if inv_match.group("action") == "+":
+                    self.hero.add_item({inv_match.group("item"): inv_match.group("item")})
+                else:
+                    self.hero.remove_item(inv_match.group("item"))
+            # if "option" in match.group("action"):
+            #    opt_match = rx_option.search(match.group("action"))
             if "save" in match.group("action"):
                 self.level += 1
                 self.chapter = 0
                 self.save_progress()
+            if "game_won" in match.group("action"):
+                print("Congratulations! You beat the game!")
+                self.is_running = False
 
     def replace_inventory_items(self, text: str) -> str:
         rx_inventory = re.compile(r"{(?P<item>\S+)}")
@@ -175,6 +187,35 @@ class Game:
                     rx_inventory, self.hero.inventory[match.group("item")], text
                 )
         return text
+
+    def load_progress(self):
+        saves_dir = dirname(self.saves_path)
+        files = [file for file in listdir(saves_dir) if file.endswith(".json")]
+        if files:
+            print("Type your user name from the list:")
+            for file in files:
+                print(file[:-5])
+            username = input()
+            if f"{username}.json" in files:
+                print("Loading your progress...")
+                with open(f"{saves_dir}/{username}.json", "r") as save_file:
+                    data = json.load(save_file)
+                try:
+                    self.hero = Character()
+                    self.hero.name = data["char_attrs"]["name"]
+                    self.hero.species = data["char_attrs"]["species"]
+                    self.hero.gender = data["char_attrs"]["gender"]
+                    self.hero.inventory = data["inventory"]
+                    self.hero.lives = data["lives"]
+                    self.difficulty = data["difficulty"]
+                    self.level = data["level"]
+                    self.game_loop()
+                except KeyError:
+                    print("Save file is corrupted!")
+            else:
+                print("No save data found!")
+        else:
+            print("No save data found!")
 
     def save_progress(self):
         save_dict = {
@@ -200,9 +241,18 @@ class Game:
         if user_name != "/b":
             # User settings
             self.user = user_name
-            self.saves_path = f"saves/{self.user}.json"
+            self.saves_path = f"game/saves/{self.user}.json"
             # Create our Hero
             self.hero = Character()
+            print("Create your character:")
+            self.hero.name = input("Name ")
+            self.hero.species = input("Species ")
+            self.hero.gender = input("Gender ")
+            print("Pack your bag for the journey:")
+            snack = input("Favourite Snack ")
+            weapon = input("A weapon for the journey ")
+            tool = input("A traversal tool ")
+            self.hero.add_item({"snack": snack, "weapon": weapon, "tool": tool}, silent=True)
             # Set up game difficulty
             while True:
                 difficulty = self.get_user_choice(

@@ -2,17 +2,9 @@ class Character:
     def __init__(self):
         self.lives = 3
         self.inventory = {}  # {"item_type": "item_name"}
-
-        print("Create your character:")
-        self.name = input("Name ")
-        self.species = input("Species ")
-        self.gender = input("Gender ")
-
-        print("Pack your bag for the journey:")
-        snack = input("Favourite Snack ")
-        weapon = input("A weapon for the journey ")
-        tool = input("A traversal tool ")
-        self.add_item({"snack": snack, "weapon": weapon, "tool": tool}, silent=True)
+        self.name = "Unknown Hero"
+        self.species = "unknown"
+        self.gender = "unknown"
 
     def __str__(self):
         return f"{self.name}, {self.species}, {self.gender}."
@@ -20,7 +12,14 @@ class Character:
     def add_item(self, item: dict, silent: bool = False):
         self.inventory.update(item)
         if not silent:
-            print(f"A new item has been added to your inventory: {item.values()}")
+            print(f"A new item has been added to your inventory: {list(item.values())[0]}\n")
+
+    def remove_item(self, item: str):
+        try:
+            removed_item = self.inventory.pop(item)
+            print(f"An item has been removed from your inventory: {removed_item}\n")
+        except KeyError:
+            pass
 
     def add_life(self):
         self.lives += 1
