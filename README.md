@@ -14,5 +14,6 @@ Repository for training projects from [hyperskill.org](https://hyperskill.org/tr
 * Text Generator
 * Tic Tac Toe
 * To-Do List
+* Weather App
 * Web Scraper
 * Zookeeper
