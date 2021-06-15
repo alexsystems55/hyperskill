@@ -1,10 +1,32 @@
-from datetime import datetime, timedelta, timezone
+from os import environ
 import sys
-from flask import Flask, render_template, request
+from datetime import datetime, timedelta, timezone
+from typing import Callable
+
 import requests
+from flask import Flask, redirect, render_template, request
+from flask_sqlalchemy import SQLAlchemy
+
+
+class MySQLAlchemy(SQLAlchemy):
+    """
+    Wrapper for PyCharm to detect imports from SQLAlchemy correctly
+    """
+
+    Column: Callable
+    Integer: Callable
+    String: Callable
 
 
 app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///weather.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = MySQLAlchemy(app)
+
+
+class City(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(20), unique=True, nullable=False)
 
 
 def get_time(timestamp: int, offset: int) -> str:
@@ -17,7 +39,8 @@ def get_time(timestamp: int, offset: int) -> str:
     return "evening-morning"
 
 
-def get_weather_data(city: str, api_key: str) -> dict:
+def get_weather_data(city: str) -> dict:
+    api_key = environ.get("OPEN_WEATHER_KEY")  # @todo: check for the var existence
     api_url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
     response = requests.get(api_url)
     if response.status_code == 200:
@@ -30,24 +53,31 @@ def get_weather_data(city: str, api_key: str) -> dict:
     return {}
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET"])
 def index():
-    if request.method == "POST":
-        city = request.form["city_name"].capitalize()
-        if city:
-            cities_data[city] = get_weather_data(city, key)
-    return render_template("index.html", data=cities_data)
+    weather_data = {}
+    for city in City.query.all():
+        weather_data[city.name] = get_weather_data(city.name)
+    return render_template("index.html", data=weather_data)
+
+
+@app.route("/add", methods=["POST"])
+def add():
+    city_name = request.form["city_name"].capitalize()
+    if city_name:
+        city = City(name=city_name)
+        db.session.add(city)
+        db.session.commit()
+    return redirect("/")
+
+
+@app.route("/delete/<city_id>", methods=["POST"])
+def delete():
+    return redirect("/")
 
 
 # don't change the following way to run flask:
 if __name__ == "__main__":
-    with open("api_key.txt", "r") as key_file:
-        key = key_file.read().strip()
-    cities_data = {
-        city: get_weather_data(city, key)
-        for city in ("Omsk", "Volgograd", "Saint Petersburg")
-    }
-    # app.debug = True
     app.env = "development"
     if len(sys.argv) > 1:
         arg_host, arg_port = sys.argv[1].split(":")

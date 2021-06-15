@@ -20,17 +20,16 @@
     </div>
     {% endif %}
     {% endwith %}
-    <form action="/" method="POST">
+    <form action="/add" method="POST">
         <input type="text" placeholder="Enter a city name" name="city_name" id="input-city">
         <button type="submit" class="submit-button">Add</button>
     </form>
 </div>
 <div class="cards">
     {% for item in data %}
-    <!-- <div class="card {{ data[item]['time'] }}"> -->
-    <div class="card">
+    <div class="card {{ data[item]['time'] }}">
         <div class="delete-wrapper">
-            <form action="#" method="POST">
+            <form action="/delete/{{ }}" method="POST">
                 <input type="hidden" name="id" value="">
                 <button class="delete-button" type="submit">&#10006;</button>
             </form>
