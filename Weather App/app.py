@@ -1,10 +1,10 @@
-from os import environ
+from os import environ, urandom
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
 import requests
-from flask import Flask, redirect, render_template, request
+from flask import Flask, flash, redirect, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -21,6 +21,7 @@ class MySQLAlchemy(SQLAlchemy):
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///weather.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SECRET_KEY"] = urandom(16)
 db = MySQLAlchemy(app)
 
 
@@ -29,7 +30,10 @@ class City(db.Model):
     name = db.Column(db.String(20), unique=True, nullable=False)
 
 
-def get_time(timestamp: int, offset: int) -> str:
+db.create_all()
+
+
+def get_time_of_day(timestamp: int, offset: int) -> str:
     delta = datetime.fromtimestamp(timestamp, timezone(timedelta(seconds=offset)))
     hour = delta.hour
     if 12 < hour < 18:
@@ -40,16 +44,20 @@ def get_time(timestamp: int, offset: int) -> str:
 
 
 def get_weather_data(city: str) -> dict:
-    api_key = environ.get("OPEN_WEATHER_KEY")  # @todo: check for the var existence
+    if "OPEN_WEATHER_KEY" not in environ:
+        print("Debug: API key is not defined!")
+    api_key = environ.get("OPEN_WEATHER_KEY")
     api_url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
     response = requests.get(api_url)
-    if response.status_code == 200:
+    if response.status_code == 200:  # HTTP response status code
         response_json = response.json()
-        return {
-            "state": response_json["weather"][0]["main"],
-            "temp": response_json["main"]["temp"],
-            "time": get_time(response_json["dt"], response_json["timezone"]),
-        }
+        print(f"Debug: {response_json}")
+        if response_json["cod"] == 200:  # API response status code
+            return {
+                "state": response_json["weather"][0]["main"],
+                "temp": response_json["main"]["temp"],
+                "time": get_time_of_day(response_json["dt"], response_json["timezone"]),
+            }
     return {}
 
 
@@ -58,21 +66,40 @@ def index():
     weather_data = {}
     for city in City.query.all():
         weather_data[city.name] = get_weather_data(city.name)
+        weather_data[city.name]["city_id"] = city.id
     return render_template("index.html", data=weather_data)
 
 
 @app.route("/add", methods=["POST"])
 def add():
-    city_name = request.form["city_name"].capitalize()
-    if city_name:
-        city = City(name=city_name)
-        db.session.add(city)
-        db.session.commit()
+    city_name = request.form["city_name"]
+    print(f"Debug: Adding city {city_name}.")
+    if get_weather_data(city_name):
+        city = City.query.filter_by(name=city_name).first()
+        if not city:
+            city = City(name=city_name)
+            db.session.add(city)
+            db.session.commit()
+        else:
+            print(f"Debug: {city_name} already exists.")
+            flash("The city has already been added to the list!")
+    else:
+        print(f"Debug: The city '{city_name}' doesn't exist!")
+        flash("The city doesn't exist!")
     return redirect("/")
 
 
-@app.route("/delete/<city_id>", methods=["POST"])
+@app.route("/delete", methods=["POST"])
 def delete():
+    city_id = request.form["id"]
+    print(f"Debug: Deleting city with id {city_id}")
+    city = City.query.filter_by(id=city_id).first()
+    if city:
+        db.session.delete(city)
+        db.session.commit()
+    else:
+        print(f"Debug: city with id {city_id} not found.")
+        flash("The city doesn't exist!")
     return redirect("/")
 
 
