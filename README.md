@@ -5,6 +5,7 @@ Repository for training projects from [hyperskill.org](https://hyperskill.org/tr
 * Credit Calculator
 * Currency Converter
 * Flashcards
+* Food Blog Backend
 * Hangman
 * Numeric Matrix Processor
 * Regex Engine
