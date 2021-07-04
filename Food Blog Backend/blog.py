@@ -55,6 +55,18 @@ def create_database(conn: sqlite3.Connection):
                 FOREIGN KEY (meal_id) REFERENCES meals (meal_id)
             );
         """,
+        "quantity": """
+            CREATE TABLE IF NOT EXISTS quantity (
+                quantity_id INTEGER PRIMARY KEY,
+                measure_id INTEGER NOT NULL,
+                ingredient_id INTEGER NOT NULL,
+                quantity INTEGER NOT NULL,
+                recipe_id INTEGER NOT NULL,
+                FOREIGN KEY (measure_id) REFERENCES measures (measure_id),
+                FOREIGN KEY (ingredient_id) REFERENCES ingredients (ingredient_id),
+                FOREIGN KEY (recipe_id) REFERENCES recipes (recipe_id)
+            );
+        """,
     }
     data = {
         "meals": """
@@ -95,8 +107,50 @@ def fill_recipes(conn: sqlite3.Connection):
         print("1) breakfast  2) brunch  3) lunch  4) supper")
         serve = input("When the dish can be served: ").split()
         for meal in serve:
-            cursor.execute("INSERT INTO serve (meal_id, recipe_id) VALUES (?, ?);", (meal, recipe_id))
+            cursor.execute(
+                "INSERT INTO serve (meal_id, recipe_id) VALUES (?, ?);",
+                (meal, recipe_id),
+            )
         conn.commit()
+
+        while True:
+            ingredient_line = input(
+                "Input quantity of ingredient <press enter to stop>:"
+            ).split()
+            if not ingredient_line:
+                break
+            if len(ingredient_line) < 2 or len(ingredient_line) > 3:
+                print("Use <quantity> [measure] <ingredient> format!")
+                continue
+            try:
+                quantity = int(ingredient_line[0])
+            except ValueError:
+                print("Quantity should be integer!")
+                continue
+            if len(ingredient_line) == 3:
+                measure = ingredient_line[1]
+                measure_id = cursor.execute(
+                    "SELECT * FROM measures WHERE measure_name LIKE ?;", [f"%{measure}%"]
+                ).fetchall()
+                if len(measure_id) != 1:
+                    print("The measure is not conclusive!")
+                    continue
+            elif len(ingredient_line) == 2:
+                measure_id = cursor.execute(
+                    "SELECT * FROM measures WHERE measure_name = '';").fetchall()
+            ingredient = ingredient_line[-1]
+            ingredient_id = cursor.execute(
+                "SELECT * FROM ingredients WHERE ingredient_name LIKE ?;",
+                [f"%{ingredient}%"],
+            ).fetchall()
+            if len(ingredient_id) != 1:
+                print("The ingredient is not conclusive!")
+                continue
+            cursor.execute(
+                "INSERT INTO quantity (quantity, measure_id, ingredient_id, recipe_id) VALUES (?, ?, ?, ?);",
+                (quantity, measure_id[0][0], ingredient_id[0][0], recipe_id),
+            )
+            conn.commit()
 
 
 if __name__ == "__main__":
