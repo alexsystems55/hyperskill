@@ -1,12 +1,10 @@
 import argparse
-from collections import defaultdict
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from db_tables import Base, Ingredients, Meals, Measures, Recipes, Quantity, Serve
 
 
 def init_database(session):
-    print("Initializing database...")
     if len(session.query(Meals).all()) == 0:
         session.add_all(
             [
@@ -88,23 +86,43 @@ def fill_recipes(session):
             elif len(ingredient_line) == 2:
                 measure = session.query(Measures).filter_by(measure_name="").first()
             ingredient_arg = ingredient_line[-1]
-            ingredient = (
+            ingredient_db = (
                 session.query(Ingredients)
                 .filter(Ingredients.ingredient_name.like(f"%{ingredient_arg}%"))
                 .one_or_none()
             )
-            if not ingredient:
+            if not ingredient_db:
                 print("The ingredient is not conclusive!")
                 continue
             session.add(
                 Quantity(
                     quantity=quantity,
                     measure_id=measure.measure_id,
-                    ingredient_id=ingredient.ingredient_id,
+                    ingredient_id=ingredient_db.ingredient_id,
                     recipe_id=recipe.recipe_id,
                 )
             )
             session.commit()
+
+
+def recipes_by_ingredient(session, given_ingredient: str) -> set:
+    return set(
+        session.query(Recipes)
+        .join(Quantity)
+        .join(Ingredients)
+        .filter(Ingredients.ingredient_name == given_ingredient)
+        .all()
+    )
+
+
+def recipes_by_meals(session, meals: list) -> set:
+    return set(
+        session.query(Recipes)
+        .join(Serve)
+        .join(Meals)
+        .filter(Meals.meal_name.in_(meals))
+        .all()
+    )
 
 
 if __name__ == "__main__":
@@ -114,8 +132,8 @@ if __name__ == "__main__":
     parser.add_argument("--meals", help="Meals, as comma separated list")
     args = parser.parse_args()
     db_name = args.db_name
-    ingredients = args.ingredients
-    meals = args.meals
+    ingredients_arg = args.ingredients
+    meals_arg = args.meals
 
     engine = create_engine(f"sqlite:///{db_name}")
     Base.metadata.create_all(engine)
@@ -123,53 +141,18 @@ if __name__ == "__main__":
     my_session = Session()
     init_database(my_session)
 
-    if not (ingredients or meals):
+    if not (ingredients_arg or meals_arg):
         fill_recipes(my_session)
     else:
-        recipe_ids_i = set()
-        recipe_ids_m = set()
-        if ingredients:
-            ingredients_map = defaultdict(set)
-            for row in select_query(
-                connection,
-                """
-                    SELECT recipe_id, ingredient_name
-                    FROM quantity q, ingredients i
-                    WHERE q.ingredient_id = i.ingredient_id
-                """,
-            ):
-                ingredients_map[row[0]].add(row[1])
-            ingredients = set(ingredients.split(","))
-            recipe_ids_i = set(
-                recipe
-                for recipe in ingredients_map
-                if ingredients.issubset(ingredients_map[recipe])
-            )
-        if meals:
-            meals = meals.split(",")
-            recipe_ids_m = set(
-                row[0]
-                for row in select_query(
-                    connection,
-                    f"""
-                    SELECT recipe_id
-                    FROM serve s, meals m
-                    WHERE m.meal_id = s.meal_id AND meal_name IN ({q_marks(meals)})
-                """,
-                    meals,
-                )
-            )
-        recipe_ids = list(recipe_ids_i.intersection(recipe_ids_m))
-        recipes = [
-            row[0]
-            for row in select_query(
-                connection,
-                f"SELECT recipe_name FROM recipes WHERE recipe_id IN ({q_marks(recipe_ids)});",
-                recipe_ids,
-            )
-        ]
-        if recipes:
-            print(f"Recipes selected for you: {', '.join(recipes)}")
+        recipes = []
+        if ingredients_arg:
+            for ingredient in ingredients_arg.split(","):
+                recipes.append(recipes_by_ingredient(my_session, ingredient))
+        if meals_arg:
+            recipes.append(recipes_by_meals(my_session, meals_arg.split(",")))
+        recipes_to_print = [recipe.recipe_name for recipe in set.intersection(*recipes)]
+        if recipes_to_print:
+            print(f"Recipes selected for you: {', '.join(recipes_to_print)}")
         else:
             print("There are no such recipes in the database.")
     my_session.close()
