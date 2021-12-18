@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, abort
 from flask_restful import Api, inputs, reqparse, Resource
 from flask_sqlalchemy import SQLAlchemy
 import sys
@@ -20,22 +20,10 @@ class MySQLAlchemy(SQLAlchemy):
 # Initialization and configuration
 app = Flask(__name__)
 app.env = "development"
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///web_calendar.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///event.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 api = Api(app)
 db = MySQLAlchemy(app)
-
-# Request parser
-parser = reqparse.RequestParser()
-parser.add_argument(
-    "date",
-    type=inputs.date,
-    required=True,
-    help="The event date with the correct format is required! The correct format is YYYY-MM-DD!",
-)
-parser.add_argument(
-    "event", type=str, required=True, help="The event name is required!"
-)
 
 
 # DB model class
@@ -44,6 +32,9 @@ class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     event = db.Column(db.String, nullable=False)
     date = db.Column(db.Date, nullable=False)
+
+    def __repr__(self):
+        return f"{self.event} - {self.date}"
 
 
 db.create_all()
@@ -55,20 +46,71 @@ class WebCalendar(Resource):
         if event_id == "today":
             today = date.today()
             events = Event.query.filter_by(date=today)
+            if not events:
+                return {"data": "There are no events for today!"}
         elif event_id == "":
-            events = Event.query.all()
+            app.logger.warning("Empty event_id!")
+            # Request parser
+            parser = reqparse.RequestParser()
+            parser.add_argument(
+                "start_time",
+                type=inputs.date,
+                location="args",
+                required=False,
+                help="The event date with the correct format is required! The correct format is YYYY-MM-DD!",
+            )
+            parser.add_argument(
+                "end_time",
+                type=inputs.date,
+                location="args",
+                required=False,
+                help="The event date with the correct format is required! The correct format is YYYY-MM-DD!",
+            )
+            args = parser.parse_args()
+            start_time = args["start_time"]
+            end_time = args["end_time"]
+            if start_time is None and end_time is None:
+                app.logger.warning("All events!")
+                events = Event.query.all()
+            else:
+                app.logger.warning("Events between %s and %s!" % (start_time, end_time))
+                events = Event.query.filter(
+                    Event.date > start_time, Event.date < end_time
+                )
         else:
+            app.logger.warning("Not empty and not today!")
             try:
                 event_id_int = int(event_id)
             except ValueError:
-                return "event_id should be integer"
-            events = Event.query.filter_by(id=event_id_int)
+                app.logger.warning("Value error!")
+                abort(404, "The event doesn't exist!")
+                return {"message": "The event doesn't exist!"}
+            event = Event.query.get(event_id_int)
+            if not event:
+                app.logger.warning("No events")
+                abort(404, "The event doesn't exist!")
+                return {"message": "The event doesn't exist!"}
+            else:
+                return {"event": event.event, "date": str(event.date), "id": event.id}
+        for event in events:
+            app.logger.warning("Event filtered: %s" % event)
         return [
             {"event": event.event, "date": str(event.date), "id": event.id}
             for event in events
         ]
 
     def post(self):
+        # Request parser
+        parser = reqparse.RequestParser()
+        parser.add_argument(
+            "date",
+            type=inputs.date,
+            required=True,
+            help="The event date with the correct format is required! The correct format is YYYY-MM-DD!",
+        )
+        parser.add_argument(
+            "event", type=str, required=True, help="The event name is required!"
+        )
         args = parser.parse_args()
         event = Event(date=args["date"], event=args["event"])
         db.session.add(event)
@@ -78,6 +120,18 @@ class WebCalendar(Resource):
             "event": args["event"],
             "date": str(args["date"].date()),
         }
+
+    def delete(self, event_id):
+        event = Event.query.get(event_id)
+        if event is None:
+            app.logger.warning("DELETE 404")
+            abort(404, "The event doesn't exist!")
+            return {"message": "The event doesn't exist!"}
+        else:
+            app.logger.warning("DELETE 200")
+            db.session.delete(event)
+            db.session.commit()
+            return {"message": "The event has been deleted!"}
 
 
 # Routing
